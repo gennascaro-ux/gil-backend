@@ -1,20 +1,13 @@
 import os
 import asyncio
 import traceback
+import requests
 from flask import Flask, request, jsonify, Response
-import google.generativeai as genai
 import edge_tts
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        print("✅ API Key configurata correttamente")
-    except Exception as e:
-        print(f"❌ Errore configurazione API Key: {e}")
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -49,23 +42,31 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Usiamo il nome completo con il prefisso models/ per evitare il 404
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
-        response = model.generate_content(full_prompt)
+        # Chiamata REST diretta all'API v1beta per gemini-2.0-flash
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{
+                "parts": [{"text": full_prompt}]
+            }]
+        }
 
-        if not response or not response.text:
-            return jsonify({"error": "Risposta vuota da Gemini"}), 500
+        response = requests.post(url, json=payload, timeout=20)
+        
+        if response.status_code != 200:
+            print(f"❌ Errore API Google ({response.status_code}): {response.text}")
+            return jsonify({"error": f"Google API Error: {response.text}"}), 500
 
-        text_response = response.text.strip()
+        res_data = response.json()
+        text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        
         print(f"Risposta generata: {text_response}")
-
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
-        error_msg = str(e)
         print("❌ Errore critico nel backend:")
         traceback.print_exc()
-        return jsonify({"error": error_msg}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/speak", methods=["GET"])
 def speak():
