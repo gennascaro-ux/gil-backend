@@ -49,9 +49,9 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Generazione tramite SDK ufficiale aggiornato
+        # Usiamo il modello richiesto da Google: gemini-3.8-flash
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.8-flash",
             contents=full_prompt,
         )
 
