@@ -2,15 +2,17 @@ import os
 import asyncio
 import traceback
 from flask import Flask, request, jsonify, Response
-import google.generativeai as genai
+from google import genai
 import edge_tts
 
 app = Flask(__name__)
 
-# Configurazione API Key di Gemini
+# Inizializzazione del client ufficiale Google GenAI
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+client = None
+
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    client = genai.Client(api_key=GEMINI_API_KEY)
 else:
     print("⚠️ ATTENZIONE: GEMINI_API_KEY non trovata nelle variabili d'ambiente!")
 
@@ -33,6 +35,9 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        if not client:
+            return jsonify({"error": "API Key di Gemini mancante sul server"}), 500
+
         data = request.get_json()
         if not data or "prompt" not in data:
             return jsonify({"error": "Nessun prompt fornito"}), 400
@@ -44,12 +49,14 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Nome modello corretto senza prefissi 'models/'
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(full_prompt)
-        
-        if not response or not hasattr(response, "text") or not response.text:
-            return jsonify({"error": "Risposta vuota o non valida da Gemini"}), 500
+        # Generazione tramite SDK ufficiale aggiornato
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=full_prompt,
+        )
+
+        if not response or not response.text:
+            return jsonify({"error": "Risposta vuota da Gemini"}), 500
 
         text_response = response.text.strip()
         print(f"Risposta generata: {text_response}")
