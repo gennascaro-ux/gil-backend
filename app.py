@@ -2,19 +2,15 @@ import os
 import asyncio
 import traceback
 from flask import Flask, request, jsonify, Response
-from google import genai
+import google.generativeai as genai
 import edge_tts
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-client = None
 
 if GEMINI_API_KEY:
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-    except Exception as e:
-        print(f"Errore inizializzazione client GenAI: {e}")
+    genai.configure(api_key=GEMINI_API_KEY)
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -35,8 +31,8 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        if not client:
-            return jsonify({"error": "API Key di Gemini mancante o non valida sul server"}), 500
+        if not GEMINI_API_KEY:
+            return jsonify({"error": "API Key di Gemini mancante sul server"}), 500
 
         data = request.get_json(silent=True)
         if not data or "prompt" not in data:
@@ -49,12 +45,11 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=full_prompt,
-        )
+        # Usiamo il modello standard e stabile
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(full_prompt)
 
-        if not response or not hasattr(response, 'text') or not response.text:
+        if not response or not response.text:
             return jsonify({"error": "Risposta vuota da Gemini"}), 500
 
         text_response = response.text.strip()
@@ -66,7 +61,6 @@ def chat():
         error_msg = str(e)
         print("❌ Errore critico nel backend:")
         traceback.print_exc()
-        # Restituiamo l'errore esatto nel JSON così lo leggiamo sul monitor seriale
         return jsonify({"error": error_msg}), 500
 
 @app.route("/speak", methods=["GET"])
