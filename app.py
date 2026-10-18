@@ -1,7 +1,6 @@
 import os
-import base64
 import asyncio
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import google.generativeai as genai
 import edge_tts
 
@@ -11,13 +10,13 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-async def text_to_speech_base64(text, voice="it-IT-DiegoNeural"):
+async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     communicate = edge_tts.Communicate(text, voice)
     audio_data = bytearray()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
             audio_data.extend(chunk["data"])
-    return base64.b64encode(audio_data).decode("utf-8")
+    return bytes(audio_data)
 
 @app.route("/", methods=["GET"])
 def home():
@@ -42,16 +41,20 @@ def chat():
         response = model.generate_content(full_prompt)
         text_response = response.text.strip()
 
-        # Genera l'audio Base64
-        audio_b64 = asyncio.run(text_to_speech_base64(text_response))
-
         return jsonify({
-            "response": text_response,
-            "audio": audio_b64
+            "response": text_response
         }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/speak", methods=["GET"])
+def speak():
+    text = request.args.get("text", "")
+    if not text:
+        return "No text provided", 400
+    audio_bytes = asyncio.run(text_to_speech_bytes(text))
+    return Response(audio_bytes, mimetype="audio/mpeg")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
