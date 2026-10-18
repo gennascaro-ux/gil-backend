@@ -34,8 +34,8 @@ def chat():
         user_prompt = data["prompt"]
 
         full_prompt = (
-            "Sei Gil, un assistente robotico simpatico, brillante e conciso. "
-            "Rispondi sempre in italiano con frasi brevi e dirette.\n\n"
+            "Sei Gil, un assistente robotico simpatico e molto conciso. "
+            "Rispondi in massimo una o due frasi brevi in italiano.\n\n"
             f"Utente: {user_prompt}"
         )
 
@@ -43,6 +43,7 @@ def chat():
         response = model.generate_content(full_prompt)
         text_response = response.text.strip()
 
+        # Genera l'audio Base64
         audio_b64 = asyncio.run(text_to_speech_base64(text_response))
 
         return jsonify({
