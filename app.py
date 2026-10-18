@@ -50,8 +50,8 @@ def chat():
             }]
         }
 
-        # Chiamata REST diretta a gemini-1.5-flash
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Chiamata REST ufficiale con gemini-1.5-flash (v1)
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
         if response.status_code == 200:
@@ -65,8 +65,7 @@ def chat():
                 return jsonify({"response": "Ciao! Sono Gil ed è un piacere parlarti."}), 200
         else:
             print(f"⚠️ Google API ha restituito {response.status_code}: {response.text}")
-            # Risposta di fallback per non mandare mai in errore 500 l'ESP32
-            return jsonify({"response": "Ciao Genna! Sono Gil, sto collegando i miei circuiti."}), 200
+            return jsonify({"response": "Ehi Genna! I miei circuiti sono caldi e pronti."}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
