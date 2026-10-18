@@ -42,8 +42,8 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Modello aggiornato e compatibile al 100% con le API REST attuali
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Usiamo il modello richiesto direttamente dall'errore di Google
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [{
@@ -51,13 +51,18 @@ def chat():
             }]
         }
 
-        response = requests.post(url, json=payload, timeout=20)
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
         
         if response.status_code != 200:
-            print(f"❌ Errore Google API: {response.text}")
+            print(f"❌ Errore Google API ({response.status_code}): {response.text}")
             return jsonify({"error": response.text}), 500
 
         res_data = response.json()
+        
+        if "candidates" not in res_data or not res_data["candidates"]:
+            print(f"❌ Risposta inattesa da Google: {res_data}")
+            return jsonify({"error": "Risposta vuota da Google"}), 500
+
         text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
         
         print(f"✅ Risposta generata: {text_response}")
