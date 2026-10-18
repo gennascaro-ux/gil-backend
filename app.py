@@ -49,7 +49,6 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Chiamata con il modello standard stabile
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=full_prompt,
@@ -64,9 +63,11 @@ def chat():
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
-        print("❌ Errore critico nel backend durante la richiesta a Gemini:")
+        error_msg = str(e)
+        print("❌ Errore critico nel backend:")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        # Restituiamo l'errore esatto nel JSON così lo leggiamo sul monitor seriale
+        return jsonify({"error": error_msg}), 500
 
 @app.route("/speak", methods=["GET"])
 def speak():
