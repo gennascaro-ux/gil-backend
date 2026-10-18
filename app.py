@@ -22,20 +22,15 @@ def chat():
 
         user_prompt = data["prompt"]
 
-        # Prompt di sistema + domanda utente
         full_prompt = (
             "Sei Gil, un assistente robotico simpatico, brillante e conciso. "
             "Rispondi sempre in italiano in modo breve e diretto.\n\n"
             f"Utente: {user_prompt}"
         )
 
-        # Inizializza il modello Gemini (usa gemini-1.5-flash-latest con fallback su gemini-pro)
-        try:
-            model = genai.GenerativeModel("gemini-1.5-flash-latest")
-            response = model.generate_content(full_prompt)
-        except Exception:
-            model = genai.GenerativeModel("gemini-pro")
-            response = model.generate_content(full_prompt)
+        # Usiamo il nome del modello con prefisso models/
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        response = model.generate_content(full_prompt)
 
         return jsonify({"response": response.text.strip()}), 200
 
