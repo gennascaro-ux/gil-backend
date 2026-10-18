@@ -11,12 +11,16 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
-    communicate = edge_tts.Communicate(text, voice)
-    audio_data = bytearray()
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            audio_data.extend(chunk["data"])
-    return bytes(audio_data)
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        audio_data = bytearray()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_data.extend(chunk["data"])
+        return bytes(audio_data)
+    except Exception as e:
+        print(f"Errore TTS: {e}")
+        return b""
 
 @app.route("/", methods=["GET"])
 def home():
