@@ -3,7 +3,7 @@ import base64
 import asyncio
 from flask import Flask, request, jsonify
 import google.generativeai as genai
-import edge-tts
+import edge_tts
 
 app = Flask(__name__)
 
@@ -12,7 +12,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# Funzione asincrona per convertire il testo in audio MP3/WAV con Edge-TTS
 async def text_to_speech_base64(text, voice="it-IT-DiegoNeural"):
     communicate = edge_tts.Communicate(text, voice)
     audio_data = bytearray()
@@ -36,7 +35,7 @@ def chat():
 
         full_prompt = (
             "Sei Gil, un assistente robotico simpatico, brillante e conciso. "
-            "Rispondi sempre in italiano con frasi brevi e dirette per la sintesi vocale.\n\n"
+            "Rispondi sempre in italiano con frasi brevi e dirette.\n\n"
             f"Utente: {user_prompt}"
         )
 
@@ -44,7 +43,6 @@ def chat():
         response = model.generate_content(full_prompt)
         text_response = response.text.strip()
 
-        # Genera l'audio Base64
         audio_b64 = asyncio.run(text_to_speech_base64(text_response))
 
         return jsonify({
