@@ -10,7 +10,11 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("✅ API Key configurata correttamente")
+    except Exception as e:
+        print(f"❌ Errore configurazione API Key: {e}")
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -45,8 +49,8 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Usiamo il modello standard e stabile
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Usiamo il nome completo con il prefisso models/ per evitare il 404
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         response = model.generate_content(full_prompt)
 
         if not response or not response.text:
