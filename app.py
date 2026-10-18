@@ -4,7 +4,7 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Configura l'SDK ufficiale di Gemini usando la chiave salvata nelle variabili d'ambiente
+# Configura l'SDK ufficiale di Gemini
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -28,11 +28,33 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Usiamo il nome del modello con prefisso models/
-        model = genai.GenerativeModel("models/gemini-1.5-flash")
-        response = model.generate_content(full_prompt)
+        # Prova con i modelli più comuni
+        model_names = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp", "gemini-pro"]
+        
+        last_error = None
+        for name in model_names:
+            try:
+                model = genai.GenerativeModel(name)
+                response = model.generate_content(full_prompt)
+                return jsonify({"response": response.text.strip()}), 200
+            except Exception as e:
+                last_error = str(e)
+                continue
 
-        return jsonify({"response": response.text.strip()}), 200
+        # Se nessuno dei modelli sopra funziona, recuperiamo la lista dei modelli abilitati sulla tua chiave
+        available_models = []
+        try:
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    available_models.append(m.name)
+        except Exception as list_err:
+            available_models = [f"Errore lista modelli: {str(list_err)}"]
+
+        return jsonify({
+            "error": "Nessun modello valido trovato",
+            "last_error": last_error,
+            "modelli_disponibili_sulla_tua_key": available_models
+        }), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
