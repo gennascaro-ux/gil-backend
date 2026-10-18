@@ -23,18 +23,19 @@ async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "Gil Backend Online!"}), 200
+    return jsonify({"status": "Gil Backend Online!", "key_present": bool(GEMINI_API_KEY)}), 200
 
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        if not GEMINI_API_KEY:
-            return jsonify({"error": "API Key mancante"}), 500
-
         data = request.get_json(silent=True)
         user_prompt = "Ciao Gil!"
         if data and "prompt" in data and data["prompt"]:
             user_prompt = data["prompt"]
+
+        if not GEMINI_API_KEY:
+            print("❌ GEMINI_API_KEY mancante!")
+            return jsonify({"response": "Ciao! Attiva la mia chiave API su Render per farmi parlare."}), 200
 
         full_prompt = (
             "Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. "
@@ -49,24 +50,28 @@ def chat():
             }]
         }
 
-        # Modello di produzione con 1.500 richieste al giorno
+        # Chiamata REST diretta a gemini-1.5-flash
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        response = requests.post(url, json=payload, headers=headers, timeout=20)
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
 
-        if response.status_code != 200:
-            print(f"❌ Errore Google API ({response.status_code}): {response.text}")
-            return jsonify({"error": response.text}), 500
-
-        res_data = response.json()
-        text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        
-        print(f"✅ Risposta generata: {text_response}")
-        return jsonify({"response": text_response}), 200
+        if response.status_code == 200:
+            res_data = response.json()
+            try:
+                text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                print(f"✅ Risposta generata: {text_response}")
+                return jsonify({"response": text_response}), 200
+            except Exception as parse_err:
+                print(f"❌ Errore parsing: {res_data}")
+                return jsonify({"response": "Ciao! Sono Gil ed è un piacere parlarti."}), 200
+        else:
+            print(f"⚠️ Google API ha restituito {response.status_code}: {response.text}")
+            # Risposta di fallback per non mandare mai in errore 500 l'ESP32
+            return jsonify({"response": "Ciao Genna! Sono Gil, sto collegando i miei circuiti."}), 200
 
     except Exception as e:
-        print("❌ Errore critico nel backend:")
+        print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"response": "Errore di connessione ai miei circuiti."}), 200
 
 @app.route("/speak", methods=["GET"])
 def speak():
