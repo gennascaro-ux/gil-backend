@@ -44,12 +44,12 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Utilizzo del modello con nome esplicito senza prefissi
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        # Nome modello corretto senza prefissi 'models/'
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(full_prompt)
         
-        if not response or not response.text:
-            return jsonify({"error": "Risposta vuota da Gemini"}), 500
+        if not response or not hasattr(response, "text") or not response.text:
+            return jsonify({"error": "Risposta vuota o non valida da Gemini"}), 500
 
         text_response = response.text.strip()
         print(f"Risposta generata: {text_response}")
