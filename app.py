@@ -6,6 +6,7 @@ import edge_tts
 
 app = Flask(__name__)
 
+# Configurazione API Key di Gemini
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -41,8 +42,13 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        model = genai.GenerativeModel("gemini-3.5-flash")
+        # Inizializzazione corretta e stabile del modello
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(full_prompt)
+        
+        if not response or not response.text:
+            return jsonify({"error": "Risposta vuota da Gemini"}), 500
+
         text_response = response.text.strip()
 
         return jsonify({
@@ -50,6 +56,7 @@ def chat():
         }), 200
 
     except Exception as e:
+        print(f"Errore Chat: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/speak", methods=["GET"])
