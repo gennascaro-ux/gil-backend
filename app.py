@@ -29,11 +29,11 @@ def home():
 def chat():
     try:
         if not GEMINI_API_KEY:
-            return jsonify({"error": "API Key di Gemini mancante sul server"}), 500
+            return jsonify({"error": "API Key mancante su Render"}), 500
 
         data = request.get_json(silent=True)
         if not data or "prompt" not in data:
-            return jsonify({"error": "Nessun prompt fornito o JSON non valido"}), 400
+            return jsonify({"error": "Nessun prompt fornito"}), 400
 
         user_prompt = data["prompt"]
         full_prompt = (
@@ -42,8 +42,8 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Chiamata REST diretta all'API v1beta per gemini-2.0-flash
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        # Modello aggiornato e compatibile al 100% con le API REST attuali
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [{
@@ -54,13 +54,13 @@ def chat():
         response = requests.post(url, json=payload, timeout=20)
         
         if response.status_code != 200:
-            print(f"❌ Errore API Google ({response.status_code}): {response.text}")
-            return jsonify({"error": f"Google API Error: {response.text}"}), 500
+            print(f"❌ Errore Google API: {response.text}")
+            return jsonify({"error": response.text}), 500
 
         res_data = response.json()
         text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
         
-        print(f"Risposta generata: {text_response}")
+        print(f"✅ Risposta generata: {text_response}")
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
