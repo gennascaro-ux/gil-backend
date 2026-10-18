@@ -7,14 +7,14 @@ import edge_tts
 
 app = Flask(__name__)
 
-# Inizializzazione del client ufficiale Google GenAI
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 client = None
 
 if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-else:
-    print("⚠️ ATTENZIONE: GEMINI_API_KEY non trovata nelle variabili d'ambiente!")
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        print(f"Errore inizializzazione client GenAI: {e}")
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -36,26 +36,26 @@ def home():
 def chat():
     try:
         if not client:
-            return jsonify({"error": "API Key di Gemini mancante sul server"}), 500
+            return jsonify({"error": "API Key di Gemini mancante o non valida sul server"}), 500
 
-        data = request.get_json()
+        data = request.get_json(silent=True)
         if not data or "prompt" not in data:
-            return jsonify({"error": "Nessun prompt fornito"}), 400
+            return jsonify({"error": "Nessun prompt fornito o JSON non valido"}), 400
 
         user_prompt = data["prompt"]
         full_prompt = (
-            "Sei Gil, un assistente robotico simpatico e molto conciso. "
+            "Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. "
             "Rispondi in massimo 1 o 2 frasi brevi in italiano.\n\n"
             f"Utente: {user_prompt}"
         )
 
-        # Usiamo il modello richiesto da Google: gemini-3.8-flash
+        # Chiamata sicura con il modello corretto
         response = client.models.generate_content(
             model="gemini-3.8-flash",
             contents=full_prompt,
         )
 
-        if not response or not response.text:
+        if not response or not hasattr(response, 'text') or not response.text:
             return jsonify({"error": "Risposta vuota da Gemini"}), 500
 
         text_response = response.text.strip()
@@ -64,7 +64,7 @@ def chat():
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
-        print("❌ Errore durante la richiesta a Gemini:")
+        print("❌ Errore critico nel backend durante la richiesta a Gemini:")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
