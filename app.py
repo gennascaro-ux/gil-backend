@@ -48,8 +48,8 @@ def chat():
             }]
         }
 
-        # URL corretto con v1beta e gemini-1.5-flash
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Usiamo gemini-pro che è l'endpoint REST standard supportato al 100%
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
         if response.status_code == 200:
