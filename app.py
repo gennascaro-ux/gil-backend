@@ -4,6 +4,7 @@ import traceback
 from flask import Flask, request, jsonify, Response
 import edge_tts
 from google import genai
+from google.genai import types
 
 app = Flask(__name__)
 
@@ -31,21 +32,28 @@ def home():
 def chat():
     try:
         data = request.get_json(silent=True) or {}
-        user_prompt = data.get("prompt", "Ciao Gil!")
+        user_prompt = data.get("prompt", "Ciao!")
 
         if not client:
             print("❌ GEMINI_API_KEY mancante!")
             return jsonify({"response": "Chiave API mancante nei secret di Render."}), 500
 
         full_prompt = (
-            "Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. "
-            "Rispondi in massimo 1 o 2 frasi brevi in italiano, in modo parlato e naturale senza simboli speciali o formattazione.\n\n"
+            "Sei Gil, un robottino iperattivo e ultra-conciso. "
+            "Rispondi in massimo 1 frase brevissima in italiano, senza formattazione.\n\n"
             f"Utente: {user_prompt}"
+        )
+
+        # Configurazione per forzare risposte fulminee ed evitare testo superfluo
+        config = types.GenerateContentConfig(
+            max_output_tokens=50,
+            temperature=0.7,
         )
 
         response = client.models.generate_content(
             model='gemini-3.8-flash',
             contents=full_prompt,
+            config=config,
         )
         
         text_response = response.text.strip()
@@ -55,7 +63,7 @@ def chat():
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Ehi Genna, ho un piccolo intoppo nei circuiti."}), 200
+        return jsonify({"response": "Ehi, piccolo intoppo!"}), 200
 
 @app.route("/speak", methods=["GET"])
 def speak():
