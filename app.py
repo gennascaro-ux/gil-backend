@@ -48,7 +48,6 @@ def chat():
             }]
         }
 
-        # Usiamo l'endpoint v1 stabile con gemini-1.5-flash
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
@@ -68,7 +67,7 @@ def chat():
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Errore interno nei miei circuiti."}), 200
+        return jsonify({"response": "Errore interno nei miei circuiti."}), 500
 
 @app.route("/speak", methods=["GET"])
 def speak():
