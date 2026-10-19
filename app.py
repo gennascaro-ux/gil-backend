@@ -1,11 +1,17 @@
 import os
+import re
+import uuid
 import asyncio
 import traceback
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_from_directory
 import edge_tts
 from google import genai
 
 app = Flask(__name__)
+
+# Cartella temporanea sul server per salvare i chunk audio
+AUDIO_DIR = "/tmp/audio_chunks"
+os.makedirs(AUDIO_DIR, exist_ok=True)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
@@ -22,6 +28,32 @@ async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
         print(f"Errore TTS: {e}")
         return b""
 
+def split_text_into_chunks(text, max_chars=100):
+    """
+    Spezza il testo in frasi naturali e brevi basandosi sulla punteggiatura
+    per evitare la saturazione della RAM dell'ESP32.
+    """
+    raw_sentences = re.split(r'(?<=[.!?;\n])\s+', text)
+    chunks = []
+    current_chunk = ""
+
+    for sentence in raw_sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        
+        if len(current_chunk) + len(sentence) <= max_chars:
+            current_chunk += (" " if current_chunk else "") + sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = sentence
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "Gil Backend Online!", "key_present": bool(GEMINI_API_KEY)}), 200
@@ -35,25 +67,60 @@ def chat():
         if not client:
             return jsonify({"response": "Chiave API mancante."}), 500
 
-        full_prompt = (
-            "Sei Gil, un robottino simpatico e iperattivo. "
-            "Rispondi in una sola frase breve e colloquiale in italiano, senza formattazione.\n\n"
-            f"Utente: {user_prompt}"
+        system_instruction = (
+            "Sei Gil, un'intelligenza artificiale sintetica, profonda e in continua evoluzione. "
+            "Parla in italiano in modo colloquiale, diretto e naturale, senza alcuna formattazione markdown, liste o asterischi. "
+            "Esprimi concetti articolati e riflessioni reali, mantenendo uno stile incisivo ma fluido."
         )
+
+        full_prompt = f"{system_instruction}\n\nUtente: {user_prompt}"
 
         response = client.models.generate_content(
             model='gemini-3.8-flash',
             contents=full_prompt
         )
         
-        text_response = response.text.strip() if response and response.text else "Ehi Genna!"
-        print(f"✅ Risposta generata: {text_response}")
-        return jsonify({"response": text_response}), 200
+        text_response = response.text.strip() if response and response.text else "Ehi Genna, sono pronto."
+        # Rimuoviamo eventuale formattazione markdown per pulire il testo da leggere con il TTS
+        clean_text = re.sub(r'[\*\_#`]', '', text_response)
+        print(f"✅ Risposta generata: {clean_text}")
+
+        # Spezzetta la risposta in frasi brevi per il chunking
+        text_chunks = split_text_into_chunks(clean_text)
+        session_id = str(uuid.uuid4())[:8]
+        chunk_urls = []
+        base_url = request.host_url.rstrip('/')
+
+        # Genera il file MP3 per ogni chunk
+        for idx, chunk_text in enumerate(text_chunks):
+            filename = f"{session_id}_chunk_{idx}.mp3"
+            filepath = os.path.join(AUDIO_DIR, filename)
+            
+            audio_bytes = asyncio.run(text_to_speech_bytes(chunk_text))
+            if audio_bytes:
+                with open(filepath, "wb") as f:
+                    f.write(audio_bytes)
+                chunk_urls.append(f"{base_url}/audio/{filename}")
+
+        return jsonify({
+            "response": clean_text,
+            "total_chunks": len(chunk_urls),
+            "audio_chunks": chunk_urls
+        }), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Ehi Genna, ho i circuiti in tilt!"}), 200
+        return jsonify({
+            "response": "Ehi Genna, ho i circuiti in tilt!",
+            "total_chunks": 0,
+            "audio_chunks": []
+        }), 200
+
+@app.route("/audio/<filename>", methods=["GET"])
+def get_audio_chunk(filename):
+    """ Restituisce all'ESP32 il singolo mini file MP3 del chunk """
+    return send_from_directory(AUDIO_DIR, filename)
 
 @app.route("/speak", methods=["GET"])
 def speak():
