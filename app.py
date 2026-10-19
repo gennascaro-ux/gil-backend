@@ -48,8 +48,7 @@ def chat():
             }]
         }
 
-        # Usiamo l'endpoint v1 con gemini-pro che è lo standard nativo stabile
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
         if response.status_code == 200:
