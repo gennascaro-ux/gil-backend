@@ -2,4 +2,4 @@ Flask
 gunicorn
 requests
 edge-tts
-google-generativeai
+google-genai
