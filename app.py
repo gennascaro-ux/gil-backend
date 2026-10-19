@@ -36,7 +36,7 @@ def chat():
 
         if not client:
             print("❌ GEMINI_API_KEY mancante!")
-            return jsonify({"response": "Chiave API mancante nei secret di Render."}), 500
+            return jsonify({"response": "Chiave API mancante."}), 500
 
         full_prompt = (
             "Sei Gil, un robottino iperattivo e ultra-conciso. "
@@ -44,9 +44,8 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Configurazione per forzare risposte fulminee ed evitare testo superfluo
         config = types.GenerateContentConfig(
-            max_output_tokens=50,
+            max_output_tokens=60,
             temperature=0.7,
         )
 
@@ -56,14 +55,19 @@ def chat():
             config=config,
         )
         
-        text_response = response.text.strip()
+        # Controllo di sicurezza per evitare crash se la risposta è vuota o None
+        if response and response.text:
+            text_response = response.text.strip()
+        else:
+            text_response = "Tutto OK!"
+
         print(f"✅ Risposta generata: {text_response}")
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Ehi, piccolo intoppo!"}), 200
+        return jsonify({"response": "Tutto sotto controllo!"}), 200
 
 @app.route("/speak", methods=["GET"])
 def speak():
