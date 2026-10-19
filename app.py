@@ -48,8 +48,8 @@ def chat():
             }]
         }
 
-        # Modello aggiornato a gemini-1.5-flash con la sintassi v1beta corretta
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # Usiamo l'endpoint v1 stabile con gemini-1.5-flash
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
         if response.status_code == 200:
@@ -63,12 +63,12 @@ def chat():
                 return jsonify({"response": "Ehi Genna, ho avuto un piccolo intoppo nei miei circuiti mentali."}), 200
         else:
             print(f"⚠️ Google API status {response.status_code}: {response.text}")
-            return jsonify({"response": "I miei sensori rilevano un piccolo problema con la rete neurale."}), 200
+            return jsonify({"response": f"Errore neurale {response.status_code}."}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Errore interno nei miei circuiti."}), 500
+        return jsonify({"response": "Errore interno nei miei circuiti."}), 200
 
 @app.route("/speak", methods=["GET"])
 def speak():
