@@ -48,7 +48,6 @@ def chat():
             }]
         }
 
-        # Usiamo gemini-pro che è l'endpoint REST standard supportato al 100%
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
@@ -59,11 +58,11 @@ def chat():
                 print(f"✅ Risposta generata: {text_response}")
                 return jsonify({"response": text_response}), 200
             except Exception as parse_err:
-                print(f"❌ Errore parsing: {res_data}")
-                return jsonify({"response": "Errore nel decodificare la risposta da Gemini."}), 500
+                print(f"❌ Errore parsing JSON Google: {res_data}")
+                return jsonify({"response": "Ehi Genna, ho avuto un piccolo intoppo nei miei circuiti mentali."}), 200
         else:
             print(f"⚠️ Google API status {response.status_code}: {response.text}")
-            return jsonify({"response": f"Errore Google API codice {response.status_code}."}), 500
+            return jsonify({"response": "I miei sensori rilevano un piccolo problema con la rete neurale."}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
