@@ -1,15 +1,13 @@
 import os
 import asyncio
 import traceback
+import requests
 from flask import Flask, request, jsonify, Response
 import edge_tts
-import google.generativeai as genai
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -30,31 +28,42 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        data = request.get_json(silent=True)
-        user_prompt = "Ciao Gil!"
-        if data and "prompt" in data and data["prompt"]:
-            user_prompt = data["prompt"]
+        data = request.get_json(silent=True) or {}
+        user_prompt = data.get("prompt", "Ciao Gil!")
 
         if not GEMINI_API_KEY:
             print("❌ GEMINI_API_KEY mancante!")
-            return jsonify({"response": "Chiave API mancante su Render."}), 500
+            return jsonify({"response": "Chiave API mancante nei secret di Render."}), 500
 
-        generation_config = {
-            "temperature": 0.7,
-            "max_output_tokens": 150,
-        }
-        
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            generation_config=generation_config,
-            system_instruction="Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. Rispondi in massimo 1 o 2 frasi brevi in italiano."
+        full_prompt = (
+            "Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. "
+            "Rispondi in massimo 1 o 2 frasi brevi in italiano, in modo parlato e naturale senza simboli speciali o formattazione.\n\n"
+            f"Utente: {user_prompt}"
         )
 
-        response = model.generate_content(user_prompt)
-        text_response = response.text.strip() if response and response.text else "I miei circuiti sono temporaneamente confusi."
-        
-        print(f"✅ Risposta generata: {text_response}")
-        return jsonify({"response": text_response}), 200
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{
+                "parts": [{"text": full_prompt}]
+            }]
+        }
+
+        # URL corretto con v1beta e gemini-1.5-flash
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+
+        if response.status_code == 200:
+            res_data = response.json()
+            try:
+                text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                print(f"✅ Risposta generata: {text_response}")
+                return jsonify({"response": text_response}), 200
+            except Exception as parse_err:
+                print(f"❌ Errore parsing: {res_data}")
+                return jsonify({"response": "Errore nel decodificare la risposta da Gemini."}), 500
+        else:
+            print(f"⚠️ Google API status {response.status_code}: {response.text}")
+            return jsonify({"response": f"Errore Google API codice {response.status_code}."}), 500
 
     except Exception as e:
         print("❌ Errore interno al server:")
