@@ -1,16 +1,13 @@
 import os
 import asyncio
 import traceback
+import requests
 from flask import Flask, request, jsonify, Response
 import edge_tts
-import google.generativeai as genai
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -44,18 +41,34 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Usiamo l'SDK ufficiale Google che gestisce automaticamente il modello corretto
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(full_prompt)
-        
-        text_response = response.text.strip()
-        print(f"✅ Risposta generata: {text_response}")
-        return jsonify({"response": text_response}), 200
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{
+                "parts": [{"text": full_prompt}]
+            }]
+        }
+
+        # Usiamo l'endpoint v1 con gemini-pro che è lo standard nativo stabile
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+
+        if response.status_code == 200:
+            res_data = response.json()
+            try:
+                text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                print(f"✅ Risposta generata: {text_response}")
+                return jsonify({"response": text_response}), 200
+            except Exception as parse_err:
+                print(f"❌ Errore parsing JSON Google: {res_data}")
+                return jsonify({"response": "Ehi Genna, ho avuto un piccolo intoppo nei miei circuiti."}), 200
+        else:
+            print(f"⚠️ Google API status {response.status_code}: {response.text}")
+            return jsonify({"response": "I miei sensori rilevano un piccolo problema con la rete neurale."}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Errore interno nei miei circuiti."}), 200
+        return jsonify({"response": "Errore interno nei miei circuiti."}), 500
 
 @app.route("/speak", methods=["GET"])
 def speak():
