@@ -35,7 +35,7 @@ def chat():
 
         if not GEMINI_API_KEY:
             print("❌ GEMINI_API_KEY mancante!")
-            return jsonify({"response": "Ciao! Attiva la mia chiave API su Render per farmi parlare."}), 200
+            return jsonify({"response": "Chiave API mancante su Render."}), 500
 
         full_prompt = (
             "Sei Gil, un assistente robotico simpatico, iperattivo e molto conciso. "
@@ -50,7 +50,6 @@ def chat():
             }]
         }
 
-        # Chiamata REST ufficiale con gemini-1.5-flash (v1)
         url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         response = requests.post(url, json=payload, headers=headers, timeout=15)
 
@@ -61,16 +60,16 @@ def chat():
                 print(f"✅ Risposta generata: {text_response}")
                 return jsonify({"response": text_response}), 200
             except Exception as parse_err:
-                print(f"❌ Errore parsing: {res_data}")
-                return jsonify({"response": "Ciao! Sono Gil ed è un piacere parlarti."}), 200
+                print(f"❌ Errore parsing: {res_data} - {parse_err}")
+                return jsonify({"response": "Errore nel decodificare la risposta."}), 500
         else:
             print(f"⚠️ Google API ha restituito {response.status_code}: {response.text}")
-            return jsonify({"response": "Ehi Genna! I miei circuiti sono caldi e pronti."}), 200
+            return jsonify({"response": f"Errore Google API: {response.status_code}"}), 500
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Errore di connessione ai miei circuiti."}), 200
+        return jsonify({"response": "Errore interno nei miei circuiti."}), 500
 
 @app.route("/speak", methods=["GET"])
 def speak():
