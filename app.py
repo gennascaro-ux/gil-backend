@@ -41,13 +41,12 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Chiamata pulita senza oggetti di configurazione complessi
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=full_prompt
         )
         
-        text_response = response.text.strip() if response and response.text else "Ciao Genna!"
+        text_response = response.text.strip() if response and response.text else "Ehi Genna!"
         print(f"✅ Risposta generata: {text_response}")
         return jsonify({"response": text_response}), 200
 
