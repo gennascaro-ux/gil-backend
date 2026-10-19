@@ -4,12 +4,10 @@ import traceback
 from flask import Flask, request, jsonify, Response
 import edge_tts
 from google import genai
-from google.genai import types
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
@@ -35,39 +33,28 @@ def chat():
         user_prompt = data.get("prompt", "Ciao!")
 
         if not client:
-            print("❌ GEMINI_API_KEY mancante!")
             return jsonify({"response": "Chiave API mancante."}), 500
 
         full_prompt = (
-            "Sei Gil, un robottino iperattivo e ultra-conciso. "
-            "Rispondi in massimo 1 frase brevissima in italiano, senza formattazione.\n\n"
+            "Sei Gil, un robottino simpatico e iperattivo. "
+            "Rispondi in una sola frase breve e colloquiale in italiano, senza formattazione.\n\n"
             f"Utente: {user_prompt}"
         )
 
-        config = types.GenerateContentConfig(
-            max_output_tokens=60,
-            temperature=0.7,
-        )
-
+        # Chiamata pulita senza oggetti di configurazione complessi
         response = client.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=full_prompt,
-            config=config,
+            model='gemini-2.5-flash',
+            contents=full_prompt
         )
         
-        # Controllo di sicurezza per evitare crash se la risposta è vuota o None
-        if response and response.text:
-            text_response = response.text.strip()
-        else:
-            text_response = "Tutto OK!"
-
+        text_response = response.text.strip() if response and response.text else "Ciao Genna!"
         print(f"✅ Risposta generata: {text_response}")
         return jsonify({"response": text_response}), 200
 
     except Exception as e:
         print("❌ Errore interno al server:")
         traceback.print_exc()
-        return jsonify({"response": "Tutto sotto controllo!"}), 200
+        return jsonify({"response": "Ehi Genna, ho i circuiti in tilt!"}), 200
 
 @app.route("/speak", methods=["GET"])
 def speak():
