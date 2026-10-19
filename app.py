@@ -3,14 +3,13 @@ import asyncio
 import traceback
 from flask import Flask, request, jsonify, Response
 import edge_tts
-import google.generativeai as genai
+from google import genai
 
 app = Flask(__name__)
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
     try:
@@ -34,7 +33,7 @@ def chat():
         data = request.get_json(silent=True) or {}
         user_prompt = data.get("prompt", "Ciao Gil!")
 
-        if not GEMINI_API_KEY:
+        if not client:
             print("❌ GEMINI_API_KEY mancante!")
             return jsonify({"response": "Chiave API mancante nei secret di Render."}), 500
 
@@ -44,9 +43,10 @@ def chat():
             f"Utente: {user_prompt}"
         )
 
-        # Utilizziamo l'SDK ufficiale passando il modello corretto
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(full_prompt)
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=full_prompt,
+        )
         
         text_response = response.text.strip()
         print(f"✅ Risposta generata: {text_response}")
