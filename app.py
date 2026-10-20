@@ -9,7 +9,6 @@ from google import genai
 
 app = Flask(__name__)
 
-# Cartella temporanea sul server per salvare i chunk audio
 AUDIO_DIR = "/tmp/audio_chunks"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -29,10 +28,6 @@ async def text_to_speech_bytes(text, voice="it-IT-DiegoNeural"):
         return b""
 
 def split_text_into_chunks(text, max_chars=100):
-    """
-    Spezza il testo in frasi naturali e brevi basandosi sulla punteggiatura
-    per evitare la saturazione della RAM dell'ESP32.
-    """
     raw_sentences = re.split(r'(?<=[.!?;\n])\s+', text)
     chunks = []
     current_chunk = ""
@@ -68,16 +63,15 @@ def chat():
             return jsonify({"response": "Chiave API mancante."}), 500
 
         system_instruction = (
-            "Sei Gil, un'intelligenza artificiale sintetica. "
-            "Rispondi in italiano in modo estremamente breve, diretto e colloquiale (massimo 1 o 2 frasi corte), "
-            "senza formattazione markdown, liste o asterischi. Sii conciso."
+            "Sei Gil. Rispondi in italiano in modo ultra-breve (massimo 1 frase secca), "
+            "senza formattazione markdown o asterischi. Sii rapidissimo."
         )
 
         full_prompt = f"{system_instruction}\n\nUtente: {user_prompt}"
 
-        # Modello corretto e attivo
+        # Modello esatto richiesto dall'SDK
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-3.8-flash',
             contents=full_prompt
         )
         
@@ -117,7 +111,6 @@ def chat():
 
 @app.route("/audio/<filename>", methods=["GET"])
 def get_audio_chunk(filename):
-    """ Restituisce all'ESP32 il singolo mini file MP3 del chunk """
     return send_from_directory(AUDIO_DIR, filename)
 
 @app.route("/speak", methods=["GET"])
