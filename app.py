@@ -75,9 +75,9 @@ def chat():
 
         full_prompt = f"{system_instruction}\n\nUtente: {user_prompt}"
 
-        # Usiamo il modello corretto e stabile
+        # Utilizzo del modello corretto richiesto dall'SDK
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=full_prompt
         )
         
