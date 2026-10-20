@@ -68,30 +68,28 @@ def chat():
             return jsonify({"response": "Chiave API mancante."}), 500
 
         system_instruction = (
-            "Sei Gil, un'intelligenza artificiale sintetica, profonda e in continua evoluzione. "
-            "Parla in italiano in modo colloquiale, diretto e naturale, senza alcuna formattazione markdown, liste o asterischi. "
-            "Esprimi concetti articolati e riflessioni reali, mantenendo uno stile incisivo ma fluido."
+            "Sei Gil, un'intelligenza artificiale sintetica. "
+            "Rispondi in italiano in modo estremamente breve, diretto e colloquiale (massimo 1 o 2 frasi corte), "
+            "senza formattazione markdown, liste o asterischi. Sii conciso."
         )
 
         full_prompt = f"{system_instruction}\n\nUtente: {user_prompt}"
 
+        # Usiamo il modello corretto e stabile
         response = client.models.generate_content(
-            model='gemini-3.8-flash',
+            model='gemini-2.5-flash',
             contents=full_prompt
         )
         
         text_response = response.text.strip() if response and response.text else "Ehi Genna, sono pronto."
-        # Rimuoviamo eventuale formattazione markdown per pulire il testo da leggere con il TTS
         clean_text = re.sub(r'[\*\_#`]', '', text_response)
         print(f"✅ Risposta generata: {clean_text}")
 
-        # Spezzetta la risposta in frasi brevi per il chunking
         text_chunks = split_text_into_chunks(clean_text)
         session_id = str(uuid.uuid4())[:8]
         chunk_urls = []
         base_url = request.host_url.rstrip('/')
 
-        # Genera il file MP3 per ogni chunk
         for idx, chunk_text in enumerate(text_chunks):
             filename = f"{session_id}_chunk_{idx}.mp3"
             filepath = os.path.join(AUDIO_DIR, filename)
